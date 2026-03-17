@@ -1,37 +1,43 @@
-name: "Release Build (Basic)"
+name: "Manual Release Build"
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: false
+        default: 'manual-build'
 
 jobs:
   build:
     runs-on: windows-latest
 
-    env:
-      BUILD_CONFIG: Release
-      ARCHIVE_NAME: CnCNet-Spawner-${{ github.ref_name }}.zip
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout main repo without submodules
+        uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+          
+      - name: Clone YRpp manually
+        run: |
+          git clone https://github.com/CnCNet/yrpp-spawner YRpp
+        shell: bash
+        working-directory: ${{ github.workspace }}
 
-      - name: Build
+      - name: Build Release
         uses: ./.github/actions/build
         with:
-          build-config: ${{ env.BUILD_CONFIG }}
+          build-config: Release
 
-      - name: Create an Archive for the Release
+      - name: Create Archive
         run: |
-          7z a ${{ env.ARCHIVE_NAME }} ^
+          7z a CnCNet-Spawner-${{ github.event.inputs.version }}.zip ^
           ./LICENSE.md ^
-          ./${{ env.BUILD_CONFIG }}/CnCNet-Spawner.dll ^
-          ./${{ env.BUILD_CONFIG }}/CnCNet-Spawner.pdb
+          ./Release/CnCNet-Spawner.dll ^
+          ./Release/CnCNet-Spawner.pdb
 
-      - name: Upload Files to the Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
-          append_body: true
-          files: ${{ env.ARCHIVE_NAME }}
+          name: CnCNet-Spawner-${{ github.event.inputs.version }}
+          path: CnCNet-Spawner-${{ github.event.inputs.version }}.zip
