@@ -1,4 +1,4 @@
-name: "Release Build"
+name: "Release Build (Basic)"
 
 on:
   release:
@@ -9,15 +9,9 @@ jobs:
   build:
     runs-on: windows-latest
 
-    strategy:
-      matrix:
-        build-type: [Release] # [Debug, DevBuild, Release]
-        is-cncnet-yr: ["", -CnCNetYR]
-        is-hardened: ["", -Hardened]
-
     env:
-      BUILD_CONFIG: ${{ matrix.build-type }}${{ matrix.is-cncnet-yr }}${{ matrix.is-hardened }}
-      ARCHIVE_NAME: CnCNet-Spawner${{ matrix.is-cncnet-yr }}${{ matrix.is-hardened }}-${{ github.ref_name }}.zip
+      BUILD_CONFIG: Release
+      ARCHIVE_NAME: CnCNet-Spawner-${{ github.ref_name }}.zip
 
     steps:
       - uses: actions/checkout@v4
@@ -30,11 +24,11 @@ jobs:
           build-config: ${{ env.BUILD_CONFIG }}
 
       - name: Create an Archive for the Release
-        run: >
-          7z a ${{ env.ARCHIVE_NAME }}
-          ./LICENSE.md
-          ./${{ env.BUILD_CONFIG }}/CnCNet-Spawner.dll
-          ${{!contains(env.BUILD_CONFIG, 'Hardened') && format('./{0}/CnCNet-Spawner.pdb', env.BUILD_CONFIG) || ''}}
+        run: |
+          7z a ${{ env.ARCHIVE_NAME }} ^
+          ./LICENSE.md ^
+          ./${{ env.BUILD_CONFIG }}/CnCNet-Spawner.dll ^
+          ./${{ env.BUILD_CONFIG }}/CnCNet-Spawner.pdb
 
       - name: Upload Files to the Release
         uses: softprops/action-gh-release@v2
