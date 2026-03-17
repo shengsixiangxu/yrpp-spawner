@@ -1,43 +1,46 @@
-name: "Manual Release Build"
+name: "Build (Non-Hardened Only)"
 
 on:
   workflow_dispatch:
     inputs:
+      build-type:
+        description: 'Build Configuration'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+          - Debug
+          - DevBuild
+          - Release
       version:
-        description: 'Version tag (e.g., v1.0.0)'
+        description: 'Version tag'
         required: false
         default: 'manual-build'
 
 jobs:
   build:
     runs-on: windows-latest
-
+    
     steps:
-      - name: Checkout main repo without submodules
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: recursive
+          # 不使用 SSH key，只克隆公开的子模块
           
-      - name: Clone YRpp manually
-        run: |
-          git clone https://github.com/CnCNet/yrpp-spawner YRpp
-        shell: bash
-        working-directory: ${{ github.workspace }}
-
-      - name: Build Release
+      - name: Build
         uses: ./.github/actions/build
         with:
-          build-config: Release
-
+          build-config: ${{ github.event.inputs.build-type }}
+          
       - name: Create Archive
         run: |
-          7z a CnCNet-Spawner-${{ github.event.inputs.version }}.zip ^
-          ./LICENSE.md ^
-          ./Release/CnCNet-Spawner.dll ^
-          ./Release/CnCNet-Spawner.pdb
-
+          7z a CnCNet-Spawner-${{ github.event.inputs.build-type }}-${{ github.event.inputs.version }}.zip ^
+          LICENSE.md ^
+          ${{ github.event.inputs.build-type }}/CnCNet-Spawner.dll ^
+          ${{ github.event.inputs.build-type }}/CnCNet-Spawner.pdb
+          
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CnCNet-Spawner-${{ github.event.inputs.version }}
-          path: CnCNet-Spawner-${{ github.event.inputs.version }}.zip
+          name: CnCNet-Spawner-${{ github.event.inputs.build-type }}-${{ github.event.inputs.version }}
+          path: CnCNet-Spawner-${{ github.event.inputs.build-type }}-${{ github.event.inputs.version }}.zip
