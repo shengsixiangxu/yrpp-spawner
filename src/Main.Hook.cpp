@@ -19,11 +19,13 @@
 
 #include <Main.h>
 #include <Helpers/Macro.h>
+#include <Utilities/Patch.h>
 
 bool __stdcall DllMain(HANDLE hInstance, DWORD dwReason, LPVOID v)
 {
 	if (dwReason == DLL_PROCESS_ATTACH)
 		Main::hInstance = hInstance;
+		Patch::ApplyStatic();
 
 	return true;
 }
