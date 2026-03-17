@@ -1,4 +1,4 @@
-name: "Build (Non-Hardened Only)"
+name: "Simple Build"
 
 on:
   workflow_dispatch:
@@ -12,35 +12,38 @@ on:
           - Debug
           - DevBuild
           - Release
-      version:
-        description: 'Version tag'
-        required: false
-        default: 'manual-build'
 
 jobs:
   build:
     runs-on: windows-latest
-    
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout with YRpp only
+        uses: actions/checkout@v4
         with:
-          submodules: recursive
-          # 不使用 SSH key，只克隆公开的子模块
+          submodules: false
           
-      - name: Build
-        uses: ./.github/actions/build
-        with:
-          build-config: ${{ github.event.inputs.build-type }}
-          
-      - name: Create Archive
+      - name: Clone YRpp manually
         run: |
-          7z a CnCNet-Spawner-${{ github.event.inputs.build-type }}-${{ github.event.inputs.version }}.zip ^
-          LICENSE.md ^
-          ${{ github.event.inputs.build-type }}/CnCNet-Spawner.dll ^
-          ${{ github.event.inputs.build-type }}/CnCNet-Spawner.pdb
-          
+          git clone https://github.com/Phobos-developers/YRpp.git YRpp
+          echo "YRpp cloned successfully"
+          dir YRpp
+        shell: cmd
+        working-directory: ${{ github.workspace }}
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build
+        run: |
+          msbuild /m /p:Configuration=${{ github.event.inputs.build-type }} /p:GitCommit=${{ github.sha }} /p:GitBranch=${{ github.ref }} /v:minimal Spawner.vcxproj
+        shell: cmd
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CnCNet-Spawner-${{ github.event.inputs.build-type }}-${{ github.event.inputs.version }}
-          path: CnCNet-Spawner-${{ github.event.inputs.build-type }}-${{ github.event.inputs.version }}.zip
+          name: CnCNet-Spawner-${{ github.event.inputs.build-type }}-${{ github.sha }}
+          path: |
+            LICENSE.md
+            ${{ github.event.inputs.build-type }}/CnCNet-Spawner.dll
+            ${{ github.event.inputs.build-type }}/CnCNet-Spawner.pdb
